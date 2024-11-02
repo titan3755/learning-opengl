@@ -119,19 +119,18 @@ void Application::run()
 		std::cerr << "Failed to compile shaders!" << std::endl;
 		return;
 	}
-	shaderManager.useShaderProgram();
 	std::cout << "Shader program created successfully!" << std::endl;
 	// ------------------------------------------------------------------------------->>
 
 
 	float vertices[] = {
 		// positions		// colors		  // texture coords
-		-0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-		 0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-		 0.0f,  0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.5f, 1.0f
+		-0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 0.9f, 0.0f, 0.0f,
+		 0.5f, -0.5f, 0.0f, 0.8f, 1.0f, 0.6f, 1.0f, 0.0f,
+		 0.0f,  0.5f, 0.0f, 0.4f, 0.5f, 0.7f, 0.9f, 1.0f
 	};
 
-	unsigned int texture;
+	unsigned int texture, textureTwo;
 	glGenTextures(1, &texture);
 	glBindTexture(GL_TEXTURE_2D, texture);
 
@@ -140,6 +139,8 @@ void Application::run()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+	stbi_set_flip_vertically_on_load(true);
+	
 	int width, height, nrChannels;
 	unsigned char* data = stbi_load("C:\\Users\\mahmu\\Desktop\\codez\\vs\\cpp\\opengl_learning\\opengl_learning\\src\\assets\\yo.jpg", &width, &height, &nrChannels, 0);
 	if (!data)
@@ -150,6 +151,24 @@ void Application::run()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 	glGenerateMipmap(GL_TEXTURE_2D);
 	stbi_image_free(data);
+
+	glGenTextures(1, &textureTwo);
+	glBindTexture(GL_TEXTURE_2D, textureTwo);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	unsigned char* dataTwo = stbi_load("C:\\Users\\mahmu\\Desktop\\codez\\vs\\cpp\\opengl_learning\\opengl_learning\\src\\assets\\ayo.jpeg", &width, &height, &nrChannels, 0);
+	if (!dataTwo)
+	{
+		std::cerr << "Failed to load texture two!" << std::endl;
+		return;
+	}
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, dataTwo);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	stbi_image_free(dataTwo);
 
 	unsigned int VBO, VAO;
 
@@ -169,6 +188,13 @@ void Application::run()
 
 	printOpenGLInfo();
 
+	float mixvalue = 0.0f;
+	bool mixvalueReverse = false;
+	shaderManager.useShaderProgram();
+	glUniform1i(glGetUniformLocation(shaderManager.getShaderProgram(), "textureOne"), 0);
+	glUniform1i(glGetUniformLocation(shaderManager.getShaderProgram(), "textureTwo"), 1);
+	glUniform1f(glGetUniformLocation(shaderManager.getShaderProgram(), "mixValue"), mixvalue);
+
 	while (!glfwWindowShouldClose(window) && isRunning)
 	{
 		fpsCalculate();
@@ -176,7 +202,29 @@ void Application::run()
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		shaderManager.useShaderProgram();
+		glUniform1f(glGetUniformLocation(shaderManager.getShaderProgram(), "mixValue"), mixvalue);
+		if (mixvalueReverse)
+		{
+			mixvalue -= 0.01f;
+		}
+		else
+		{
+			mixvalue += 0.01f;
+		}
+		if (mixvalue > 1.0f)
+		{
+			mixvalueReverse = true;
+			mixvalue = 1.0f;
+		}
+		else if (mixvalue < 0.0f)
+		{
+			mixvalueReverse = false;
+			mixvalue = 0.0f;
+		}
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, textureTwo);
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		glfwSwapBuffers(window);
