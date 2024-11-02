@@ -5,6 +5,7 @@ constexpr auto HEIGHT = 600;
 constexpr auto TITLE = "OpenGL Learning";
 
 int main(int argc, char* argv[]) {
+	srand(time(NULL));
 	Application app(WIDTH, HEIGHT, TITLE);
 	app.run();
 	return 0;

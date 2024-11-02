@@ -27,6 +27,7 @@ public:
 	bool compileShaders();	
 	void useShaderProgram();
 	void deleteShaderProgram();
+	unsigned int getShaderProgram();
 };
 
 #endif // SHADER_MANAGER_H

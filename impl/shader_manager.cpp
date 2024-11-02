@@ -119,6 +119,11 @@ void ShaderManager::useShaderProgram()
 	glUseProgram(shaderProgram);
 }
 
+unsigned int ShaderManager::getShaderProgram()
+{
+	return shaderProgram;
+}
+
 void ShaderManager::deleteShaderProgram()
 {
 	glDeleteProgram(shaderProgram);
