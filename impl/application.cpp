@@ -1,8 +1,9 @@
 #include <application.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
-float mixvalue = 0.0f;
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 Application::Application(int width, int height, const char* title)
 {
@@ -48,14 +49,6 @@ void Application::processInput()
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 	{
 		isRunning = false;
-	}
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-	{
-		mixvalue = 1.0f;
-	}
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-	{
-		mixvalue = 0.0f;
 	}
 }
 
@@ -135,57 +128,17 @@ void Application::run()
 
 	float vertices[] = {
 		// for rectangle
-		// positions		// colors		  // texture coords
-		1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f, // top right
-		1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.45f, // bottom right
-		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.45f, 0.45f, // bottom left
-		-1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.45f, 0.5f // top left
+		// positions		// colors
+		0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,		// top right
+		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f,	// bottom right
+		-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f,	// bottom left
+		-0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f,	// top left
 	};
 
 	unsigned int indices[] = {
 		0, 1, 3,
 		1, 2, 3
 	};
-
-	unsigned int texture, textureTwo;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	stbi_set_flip_vertically_on_load(true);
-	
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load("C:\\Users\\mahmu\\Desktop\\codez\\vs\\cpp\\opengl_learning\\opengl_learning\\src\\assets\\yo.jpg", &width, &height, &nrChannels, 0);
-	if (!data)
-	{
-		std::cerr << "Failed to load texture!" << std::endl;
-		return;
-	}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	stbi_image_free(data);
-
-	glGenTextures(1, &textureTwo);
-	glBindTexture(GL_TEXTURE_2D, textureTwo);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	unsigned char* dataTwo = stbi_load("C:\\Users\\mahmu\\Desktop\\codez\\vs\\cpp\\opengl_learning\\opengl_learning\\src\\assets\\ayo.jpg", &width, &height, &nrChannels, 0);
-	if (!dataTwo)
-	{
-		std::cerr << "Failed to load texture two!" << std::endl;
-		return;
-	}
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, dataTwo);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	stbi_image_free(dataTwo);
 
 	unsigned int VBO, VAO, EBO;
 
@@ -200,51 +153,33 @@ void Application::run()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
 
 	printOpenGLInfo();
-
-	bool mixvalueReverse = false;
 	shaderManager.useShaderProgram();
-	glUniform1i(glGetUniformLocation(shaderManager.getShaderProgram(), "textureOne"), 0);
-	glUniform1i(glGetUniformLocation(shaderManager.getShaderProgram(), "textureTwo"), 1);
-	glUniform1f(glGetUniformLocation(shaderManager.getShaderProgram(), "mixValue"), mixvalue);
+
+	// ------------------------------------------------------------------------------->>
+
+	glm::mat4 transform = glm::mat4(1.0f);
+	transform = glm::rotate(transform, glm::radians(0.01f), glm::vec3(0.0f, 0.0f, 0.01f));
+	transform = glm::translate(transform, glm::vec3(0.01f, -0.01f, 0.0f));
+	unsigned int transformLoc = glGetUniformLocation(shaderManager.getShaderProgram(), "transform");
+	glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
 
 	while (!glfwWindowShouldClose(window) && isRunning)
 	{
 		fpsCalculate();
 		processInput();
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(0.8f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		shaderManager.useShaderProgram();
-		glUniform1f(glGetUniformLocation(shaderManager.getShaderProgram(), "mixValue"), mixvalue);
-		//if (mixvalueReverse)
-		//{
-		//	mixvalue -= 0.0001f;
-		//}
-		//else
-		//{
-		//	mixvalue += 0.0001f;
-		//}
-		//if (mixvalue > 1.0f)
-		//{
-		//	mixvalueReverse = true;
-		//	mixvalue = 1.0f;
-		//}
-		//else if (mixvalue < 0.0f)
-		//{
-		//	mixvalueReverse = false;
-		//	mixvalue = 0.0f;
-		//}
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, textureTwo);
+		transform = glm::rotate(transform, glm::radians(0.01f), glm::vec3(0.0f, 0.0f, 0.01f));
+		transform = glm::translate(transform, glm::vec3(0.01f, -0.01f, 0.0f));
+		transformLoc = glGetUniformLocation(shaderManager.getShaderProgram(), "transform");
+		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transform));
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glfwSwapBuffers(window);
